@@ -1,51 +1,78 @@
-name: Run tests
+name: Coverage Comparison
 
 on:
   pull_request:
-  push:
-jobs:
-  initialize-and-test:
-    name: Initialize and test
-    runs-on: ubuntu-latest
-    steps:
-      # install dependencies from cache
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    branches:
+      - main
 
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
+jobs:
+  compare-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v2
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          ref: main
+          fetch-depth: 0
 
       - name: Install dependencies
         run: npm install
 
-      # - name: Checkout the main branch
-      #   uses: actions/checkout@v2
-      #   with:
-      #   ref: main
+      - name: Run tests and generate coverage for main branch
+        run: npm run test -- --coverage --coverageReporters=text > main-coverage.txt
 
-      - name: Install dependencies for main branch
+      - name: Save main branch coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: main-coverage-report
+          path: main-coverage.txt
+
+      - name: Checkout feature branch
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Install dependencies
         run: npm install
 
-      - name: Run tests and generate coverage for the main branch
-        run: npm run test -- --coverage --coverageDirectory=coverage-main
+      - name: Run tests and generate coverage for feature branch
+        run: npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
 
-      # - name: Checkout the PR branch
-      #   uses: actions/checkout@v2
-      #   with:
-      #     ref: ${{ github.head_ref }}
+      - name: Save feature branch coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: feature-coverage-report
+          path: feature-coverage.txt
 
-      - name: Run tests and generate coverage for the target branch
-        run: npm run test -- --coverage --coverageDirectory=coverage-target
+      - name: Download coverage reports
+        uses: actions/download-artifact@v2
+        with:
+          name: main-coverage-report
 
-      - name: Run custom coverage diff script
-        run: node coverageDiff.js
+      - name: Download feature branch coverage report
+        uses: actions/download-artifact@v2
+        with:
+          name: feature-coverage-report
+
+      - name: Compare coverage
+        run: |
+          echo "Comparing coverage..."
+          MAIN_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' main-coverage.txt | grep -oP '\d+.\d+')
+          FEATURE_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' feature-coverage.txt | grep -oP '\d+.\d+')
+
+          echo "Main branch coverage: $MAIN_LINES_COVERAGE%"
+          echo "Feature branch coverage: $FEATURE_LINES_COVERAGE%"
+
+          COVERAGE_DIFF=$(echo "$FEATURE_LINES_COVERAGE - $MAIN_LINES_COVERAGE" | bc)
+
+          echo "Coverage difference: $COVERAGE_DIFF%"
+
+          # Fail if coverage decreases
+          if (( $(echo "$COVERAGE_DIFF < 0" | bc -l) )); then
+            echo "Coverage decreased by $COVERAGE_DIFF%. Failing the build."
+            exit 1
+          else
+            echo "Coverage is equal or has increased."
+          fi
