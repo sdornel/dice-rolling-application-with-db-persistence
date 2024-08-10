@@ -20,7 +20,9 @@ jobs:
         run: npm install
 
       - name: Run tests and generate coverage for main branch
-        run: npm run test -- --coverage --coverageReporters=text > main-coverage.txt
+        run: |
+          git checkout main
+          npm run test -- --coverage --coverageReporters=text > main-coverage.txt
 
       - name: Save main branch coverage report
         uses: actions/upload-artifact@v2
@@ -38,7 +40,8 @@ jobs:
         run: npm install
 
       - name: Run tests and generate coverage for feature branch
-        run: npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
+        run: |
+          npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
 
       - name: Save feature branch coverage report
         uses: actions/upload-artifact@v2
@@ -61,6 +64,15 @@ jobs:
           echo "Comparing coverage..."
           MAIN_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' main-coverage.txt | grep -oP '\d+.\d+')
           FEATURE_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' feature-coverage.txt | grep -oP '\d+.\d+')
+
+          # Debugging lines to see what was extracted
+          echo "Extracted Main branch coverage: $MAIN_LINES_COVERAGE"
+          echo "Extracted Feature branch coverage: $FEATURE_LINES_COVERAGE"
+
+          if [ -z "$MAIN_LINES_COVERAGE" ] || [ -z "$FEATURE_LINES_COVERAGE" ]; then
+            echo "Failed to extract coverage values. Exiting."
+            exit 1
+          fi
 
           echo "Main branch coverage: $MAIN_LINES_COVERAGE%"
           echo "Feature branch coverage: $FEATURE_LINES_COVERAGE%"
