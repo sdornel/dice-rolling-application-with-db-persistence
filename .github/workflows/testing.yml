@@ -28,5 +28,20 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests with coverage
-        run: npm test -- --coverage
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and generate coverage for the target branch
+        run: npm run test -- --coverage --coverageDirectory=coverage-target
+
+      - name: Checkout main branch
+        run: git checkout main
+
+      - name: Install dependencies for main branch
+        run: npm install
+
+      - name: Run tests and generate coverage for the main branch
+        run: npm run test -- --coverage --coverageDirectory=coverage-main
+
+      - name: Run custom coverage diff script
+        run: node coverageDiff.js

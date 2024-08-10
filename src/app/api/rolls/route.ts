@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { pool } from '../../db/db';
 import { sqsClient } from '../../../../aws/sqs';
 import { QueryResult } from "pg";
-const { SQSClient, SendMessageCommand, ReceiveMessageCommand } = require("@aws-sdk/client-sqs");
 
 export async function GET(): Promise<NextResponse<{
         previousRolls: any;

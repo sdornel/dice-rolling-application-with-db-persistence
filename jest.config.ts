@@ -21,7 +21,7 @@ const customJestConfig = {
       statements: 89,
     },
   },
-  coverageReporters: ["json", "lcov", "text", "clover"],
+  coverageReporters: ["json-summary", "json", "lcov", "text", "clover"],
   coverageDirectory: "<rootDir>/coverage",
   collectCoverageFrom: [
     "app/**/*.{js,jsx,ts,tsx}",
