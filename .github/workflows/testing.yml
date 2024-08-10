@@ -28,12 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests and generate coverage for the target branch
-        run: npm run test -- --coverage --coverageDirectory=coverage-target
-
       - name: Checkout the main branch
         uses: actions/checkout@v2
         with:
@@ -44,6 +38,14 @@ jobs:
 
       - name: Run tests and generate coverage for the main branch
         run: npm run test -- --coverage --coverageDirectory=coverage-main
+
+      - name: Checkout the PR branch
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Run tests and generate coverage for the target branch
+        run: npm run test -- --coverage --coverageDirectory=coverage-target
 
       - name: Run custom coverage diff script
         run: node coverageDiff.js
