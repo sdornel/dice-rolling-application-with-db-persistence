@@ -35,7 +35,7 @@ jobs:
         run: npm run test -- --coverage --coverageDirectory=coverage-target
 
       - name: Checkout main branch
-        run: git checkout main
+        run: git switch main
 
       - name: Install dependencies for main branch
         run: npm install
