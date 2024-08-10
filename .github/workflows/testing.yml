@@ -24,9 +24,11 @@ jobs:
           git checkout main
           npm run test -- --coverage --coverageReporters=text > main-coverage.txt
 
-      - name: Display main coverage content
+      - name: Check if main-coverage.txt exists and display contents
         run: |
-          echo "Main coverage file content:"
+          echo "Checking if main-coverage.txt exists..."
+          ls -l
+          echo "Contents of main-coverage.txt:"
           cat main-coverage.txt || echo "main-coverage.txt not found"
 
       - name: Save main branch coverage report
@@ -48,9 +50,11 @@ jobs:
         run: |
           npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
 
-      - name: Display feature coverage content
+      - name: Check if feature-coverage.txt exists and display contents
         run: |
-          echo "Feature coverage file content:"
+          echo "Checking if feature-coverage.txt exists..."
+          ls -l
+          echo "Contents of feature-coverage.txt:"
           cat feature-coverage.txt || echo "feature-coverage.txt not found"
 
       - name: Save feature branch coverage report
@@ -72,8 +76,9 @@ jobs:
       - name: Compare coverage
         run: |
           echo "Comparing coverage..."
-          MAIN_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' main-coverage.txt | grep -oP '\d+.\d+')
-          FEATURE_LINES_COVERAGE=$(grep -oP 'Lines.*?(\d+.\d+%)' feature-coverage.txt | grep -oP '\d+.\d+')
+          
+          MAIN_LINES_COVERAGE=$(grep -o 'Lines.*%' main-coverage.txt | grep -o '[0-9]\+\.[0-9]\+')
+          FEATURE_LINES_COVERAGE=$(grep -o 'Lines.*%' feature-coverage.txt | grep -o '[0-9]\+\.[0-9]\+')
 
           # Debugging lines to see what was extracted
           echo "Extracted Main branch coverage: $MAIN_LINES_COVERAGE"
@@ -87,14 +92,4 @@ jobs:
           echo "Main branch coverage: $MAIN_LINES_COVERAGE%"
           echo "Feature branch coverage: $FEATURE_LINES_COVERAGE%"
 
-          COVERAGE_DIFF=$(echo "$FEATURE_LINES_COVERAGE - $MAIN_LINES_COVERAGE" | bc)
-
-          echo "Coverage difference: $COVERAGE_DIFF%"
-
-          # Fail if coverage decreases
-          if (( $(echo "$COVERAGE_DIFF < 0" | bc -l) )); then
-            echo "Coverage decreased by $COVERAGE_DIFF%. Failing the build."
-            exit 1
-          else
-            echo "Coverage is equal or has increased."
-          fi
+          COVERAGE_DIFF=$(echo "$FEATURE_LINES_CO
