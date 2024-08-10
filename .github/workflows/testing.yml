@@ -24,6 +24,11 @@ jobs:
           git checkout main
           npm run test -- --coverage --coverageReporters=text > main-coverage.txt
 
+      - name: Display main coverage content
+        run: |
+          echo "Main coverage file content:"
+          cat main-coverage.txt || echo "main-coverage.txt not found"
+
       - name: Save main branch coverage report
         uses: actions/upload-artifact@v2
         with:
@@ -42,6 +47,11 @@ jobs:
       - name: Run tests and generate coverage for feature branch
         run: |
           npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
+
+      - name: Display feature coverage content
+        run: |
+          echo "Feature coverage file content:"
+          cat feature-coverage.txt || echo "feature-coverage.txt not found"
 
       - name: Save feature branch coverage report
         uses: actions/upload-artifact@v2
