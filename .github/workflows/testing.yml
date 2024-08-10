@@ -1,60 +1,47 @@
-# name: Run tests
+name: Run tests
 
-# on:
-#   pull_request:
-#   push:
-# jobs:
-#   initialize-and-test:
-#     name: Initialize and test
-#     runs-on: ubuntu-latest
-#     steps:
-#       # install dependencies from cache
-#       - name: Checkout repository
-#         uses: actions/checkout@v2
-
-#       - name: Cache node modules
-#         id: cache-npm
-#         uses: actions/cache@v3
-#         env:
-#           cache-name: cache-node-modules
-#         with:
-#           path: ~/.npm
-#           key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-#           restore-keys: |
-#             ${{ runner.os }}-build-${{ env.cache-name }}-
-#             ${{ runner.os }}-build-
-#             ${{ runner.os }}-
-
-#       - name: Install dependencies
-#         run: npm install
-
-#       - name: Run tests with coverage
-#         run: npm test -- --coverage
-
-
-
-name: Node.js CI
-
-on: pull_request
-
+on:
+  pull_request:
+  push:
 jobs:
-  build:
-    strategy:
-      matrix:
-        node-version: [20.x]
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
+  initialize-and-test:
+    name: Initialize and test
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
-      with:
-        node-version: ${{ matrix.node-version }}
-    - run: npm ci
-    - name: TestCoverage
-      id: testCoverage
-      uses: anuraag016/Jest-Coverage-Diff@master
-      with:
-        fullCoverageDiff: false # defaults to false, if made true whole coverage report is commented with the diff
-        runCommand: "npx jest --collectCoverageFrom='[\"src/**/*.{js,jsx,ts,tsx}\"]' --coverage --collectCoverage=true --coverageDirectory='./' --coverageReporters='json-summary' --forceExit --detectOpenHandles test/.*test.*"
-        delta: 0.5
+      # install dependencies from cache
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache node modules
+        id: cache-npm
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and generate coverage for the target branch
+        run: npm run test -- --coverage --coverageDirectory=coverage-target
+
+      - name: Checkout main branch
+        run: git checkout main
+
+      - name: Install dependencies for main branch
+        run: npm install
+
+      - name: Run tests and generate coverage for the main branch
+        run: npm run test -- --coverage --coverageDirectory=coverage-main
+
+      - name: Run custom coverage diff script
+        run: node coverageDiff.js
