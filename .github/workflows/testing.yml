@@ -1,47 +1,95 @@
-name: Run tests
+name: Coverage Comparison
 
 on:
   pull_request:
-  push:
+    branches:
+      - main
+
 jobs:
-  initialize-and-test:
-    name: Initialize and test
+  compare-coverage:
     runs-on: ubuntu-latest
+
     steps:
-      # install dependencies from cache
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run tests and generate coverage for the target branch
-        run: npm run test -- --coverage --coverageDirectory=coverage-target
-
       - name: Checkout main branch
-        run: git checkout main
+        uses: actions/checkout@v2
+        with:
+          ref: main
+          fetch-depth: 0
 
-      - name: Install dependencies for main branch
+      - name: Install dependencies
         run: npm install
 
-      - name: Run tests and generate coverage for the main branch
-        run: npm run test -- --coverage --coverageDirectory=coverage-main
+      - name: Run tests and generate coverage for main branch
+        run: |
+          git checkout main
+          npm run test -- --coverage --coverageReporters=text > main-coverage.txt
 
-      - name: Run custom coverage diff script
-        run: node coverageDiff.js
+      - name: Check if main-coverage.txt exists and display contents
+        run: |
+          echo "Checking if main-coverage.txt exists..."
+          ls -l
+          echo "Contents of main-coverage.txt:"
+          cat main-coverage.txt || echo "main-coverage.txt not found"
+
+      - name: Save main branch coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: main-coverage-report
+          path: main-coverage.txt
+
+      - name: Checkout feature branch
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and generate coverage for feature branch
+        run: |
+          npm run test -- --coverage --coverageReporters=text > feature-coverage.txt
+
+      - name: Check if feature-coverage.txt exists and display contents
+        run: |
+          echo "Checking if feature-coverage.txt exists..."
+          ls -l
+          echo "Contents of feature-coverage.txt:"
+          cat feature-coverage.txt || echo "feature-coverage.txt not found"
+
+      - name: Save feature branch coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: feature-coverage-report
+          path: feature-coverage.txt
+
+      - name: Download coverage reports
+        uses: actions/download-artifact@v2
+        with:
+          name: main-coverage-report
+
+      - name: Download feature branch coverage report
+        uses: actions/download-artifact@v2
+        with:
+          name: feature-coverage-report
+
+      - name: Compare coverage
+        run: |
+          echo "Comparing coverage..."
+          
+          MAIN_LINES_COVERAGE=$(grep -o 'Lines.*%' main-coverage.txt | grep -o '[0-9]\+\.[0-9]\+')
+          FEATURE_LINES_COVERAGE=$(grep -o 'Lines.*%' feature-coverage.txt | grep -o '[0-9]\+\.[0-9]\+')
+
+          # Debugging lines to see what was extracted
+          echo "Extracted Main branch coverage: $MAIN_LINES_COVERAGE"
+          echo "Extracted Feature branch coverage: $FEATURE_LINES_COVERAGE"
+
+          if [ -z "$MAIN_LINES_COVERAGE" ] || [ -z "$FEATURE_LINES_COVERAGE" ]; then
+            echo "Failed to extract coverage values. Exiting."
+            exit 1
+          fi
+
+          echo "Main branch coverage: $MAIN_LINES_COVERAGE%"
+          echo "Feature branch coverage: $FEATURE_LINES_COVERAGE%"
+
+          COVERAGE_DIFF=$(echo "$FEATURE_LINES_CO
