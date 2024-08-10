@@ -33,43 +33,28 @@
 
 
 
-name: Run tests
+name: Node.js CI
 
-on:
-  pull_request:
-  push:
+on: pull_request
+
 jobs:
-  initialize-and-test:
-    name: Initialize and test
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      matrix:
+        node-version: [14.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
-      # install dependencies from cache
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Cache node modules
-        id: cache-npm
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: Install dependencies
-        run: npm install
-
-      # - name: Run tests with coverage
-      #   run: npm test -- --coverage
-
-      - name: TestCoverage
-        id: testCoverage
-        uses: anuraag016/Jest-Coverage-Diff@master
-        with:
-          fullCoverageDiff: false // defaults to false, if made true whole coverage report is commented with the diff
-          runCommand: "npx jest --collectCoverageFrom='[\"src/**/*.{js,jsx,ts,tsx}\"]' --coverage --collectCoverage=true --coverageDirectory='./' --coverageReporters='json-summary' --forceExit --detectOpenHandles test/.*test.*"
-          delta: 0.5
+    - uses: actions/checkout@v2
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v1
+      with:
+        node-version: ${{ matrix.node-version }}
+    - run: npm ci
+    - name: TestCoverage
+      id: testCoverage
+      uses: anuraag016/Jest-Coverage-Diff@master
+      with:
+        fullCoverageDiff: false // defaults to false, if made true whole coverage report is commented with the diff
+        runCommand: "npx jest --collectCoverageFrom='[\"src/**/*.{js,jsx,ts,tsx}\"]' --coverage --collectCoverage=true --coverageDirectory='./' --coverageReporters='json-summary' --forceExit --detectOpenHandles test/.*test.*"
+        delta: 0.5
